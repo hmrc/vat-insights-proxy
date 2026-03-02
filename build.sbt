@@ -14,6 +14,7 @@ lazy val microservice = Project("vat-insights-proxy", file("."))
     scalacOptions += "-Wconf:src=routes/.*:s",
   )
   .settings(CodeCoverageSettings.settings: _*)
+  .settings(PlayKeys.playDefaultPort := 9969)
 
 lazy val it = project
   .enablePlugins(PlayScala)

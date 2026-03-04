@@ -36,15 +36,7 @@ class InsightsService @Inject(
 
   def insights(request: InsightsRequest)(implicit hc: HeaderCarrier): Future[InsightsResponse] = {
     cipRiskConnector.getStrategicRiskScore(request).map { strategicRiskResponse =>
-      val response = InsightsResponse(
-        request,
-        StrategicRiskResponse(
-          strategicRiskResponse.riskCorrelationId,
-          strategicRiskResponse.riskScore,
-          strategicRiskResponse.reasons,
-          strategicRiskResponse.riskData
-        )
-      )
+      val response = InsightsResponse(request, strategicRiskResponse)
 
       auditConnector.sendExtendedEvent(
         ExtendedDataEvent(

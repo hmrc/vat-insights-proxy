@@ -5,11 +5,21 @@ This service provides the ability to return risking insights for a VAT registrat
 ## Sequence Diagram
 ```mermaid
 sequenceDiagram
-actor MDTP
-MDTP->>vat-insights-proxy: /vat-insights-proxy <vatRegistrationNumber>
+box Green MDTP
+actor Consumer
+participant vat-insights-proxy
+end
+box Blue CIP PaaS 2.0
+participant cip-risk
+end
+Consumer->>vat-insights-proxy: /vat-insights-proxy <vatRegistrationNumber>
+activate vat-insights-proxy
 vat-insights-proxy->>cip-risk: /str/risk/insights <vatRegistrationNumber>
+activate cip-risk
 cip-risk-->>vat-insights-proxy: response [StrategicRiskResponse]
-vat-insights-proxy-->>MDTP: response [InsightsResponse]
+deactivate cip-risk
+vat-insights-proxy-->>Consumer: response [InsightsResponse]
+deactivate vat-insights-proxy
 ```
 
 ## Required Headers

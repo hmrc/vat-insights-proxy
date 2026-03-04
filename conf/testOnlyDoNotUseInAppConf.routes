@@ -10,4 +10,8 @@
 # Failing to follow this rule may result in test routes deployed in production.
 
 # Add all the application routes to the prod.routes file
+GET        /test-only/cip-risk/*path    uk.gov.hmrc.vatinsightsproxy.testOnly.controllers.CipRiskProxyController.proxyNoBody(path)
+POST       /test-only/cip-risk/*path    uk.gov.hmrc.vatinsightsproxy.testOnly.controllers.CipRiskProxyController.proxyWithJsonBody(path)
+DELETE     /test-only/cip-risk/*path    uk.gov.hmrc.vatinsightsproxy.testOnly.controllers.CipRiskProxyController.proxyNoBody(path)
+
 ->         /                          prod.Routes

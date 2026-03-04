@@ -2,6 +2,16 @@
 
 This service provides the ability to return risking insights for a VAT registration number. It acts as a proxy to CIP backend services in order to retrieve strategic risk scores and related information for VAT numbers, supporting decision-making and risk assessment processes.
 
+## Sequence Diagram
+```mermaid
+sequenceDiagram
+actor MDTP
+MDTP->>vat-insights-proxy: /vat-insights-proxy <vatRegistrationNumber>
+vat-insights-proxy->>cip-risk: /str/risk/insights <vatRegistrationNumber>
+cip-risk-->>vat-insights-proxy: response [StrategicRiskResponse]
+vat-insights-proxy-->>MDTP: response [InsightsResponse]
+```
+
 ## Required Headers
 
 Requests to this service must include the following HTTP headers:

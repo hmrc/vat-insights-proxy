@@ -24,8 +24,7 @@ import play.api.libs.json.Json
 import play.api.libs.ws.BodyWritable
 import play.api.mvc.Results.{BadGateway, MethodNotAllowed}
 import play.api.mvc.{Request, ResponseHeader, Result}
-import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
-import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
+import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder, readStreamHttpResponse}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
 import uk.gov.hmrc.vatinsightsproxy.models.{DownstreamError, Error}
 
@@ -36,30 +35,40 @@ trait ProxyRequestHelper extends Logging {
   val httpClient: HttpClientV2
 
   def buildProxyRequest[A](
-                            request: Request[A],
-                            host: String,
-                            path: String
-                          )(implicit hc: HeaderCarrier, ec: ExecutionContext, writes: BodyWritable[A], tag: Tag[A]): Either[Error, RequestBuilder] = {
+    request: Request[A],
+    host: String,
+    path: String
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext,
+    writes: BodyWritable[A],
+    tag: Tag[A]
+  ): Either[Error, RequestBuilder] = {
     val uri = url"${host + path}"
     (request.method match {
-      case "POST" => Right(httpClient.post(uri).withBody(request.body))
-      case "GET" => Right(httpClient.get(uri))
+      case "POST"   => Right(httpClient.post(uri).withBody(request.body))
+      case "GET"    => Right(httpClient.get(uri))
       case "DELETE" => Right(httpClient.delete(uri))
-      case _ => Left(DownstreamError)
+      case _        => Left(DownstreamError)
     }).map(_.setHeader(buildOnwardHeaders(request): _*))
   }
 
-  def streamProxyResponse(proxyRequest: => Either[Error, RequestBuilder])(implicit ec: ExecutionContext): Future[Result] =
+  def streamProxyResponse(proxyRequest: => Either[Error, RequestBuilder])(implicit
+    ec: ExecutionContext
+  ): Future[Result] =
     proxyRequest.fold(
       err => Future.successful(MethodNotAllowed(Json.toJson[Error](err))),
-      _.execute[HttpResponse]
+      _.stream[HttpResponse]
         .map { (response: HttpResponse) =>
           Result(
             ResponseHeader(response.status, cleanseResponseHeaders(response)),
             HttpEntity.Streamed(response.bodyAsSource, None, response.header(CONTENT_TYPE))
           )
-        }.recover { case t: Throwable =>
-          logger.warn(s"[streamProxyResponse] An exception of type '${t.getClass.getSimpleName}' occurred when the downstream service tried to handle the request")
+        }
+        .recover { case t: Throwable =>
+          logger.warn(
+            s"[streamProxyResponse] An exception of type '${t.getClass.getSimpleName}' occurred when the downstream service tried to handle the request"
+          )
           BadGateway(Json.toJson[Error](DownstreamError))
         }
     )
@@ -72,5 +81,7 @@ trait ProxyRequestHelper extends Logging {
       .filterNot { case (k, _) =>
         Seq(CONTENT_TYPE, CONTENT_LENGTH, TRANSFER_ENCODING).map(_.toUpperCase).contains(k.toUpperCase)
       }
-      .view.mapValues(_.mkString).toMap
+      .view
+      .mapValues(_.mkString)
+      .toMap
 }

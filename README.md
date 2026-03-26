@@ -3,6 +3,11 @@
 This service provides the ability to return risking insights for a VAT registration number. It acts as a proxy to CIP backend services in order to retrieve strategic risk scores and related information for VAT numbers, supporting decision-making and risk assessment processes.
 
 ## Sequence Diagram
+
+The following diagrams show how `vat-insights-proxy` interacts with the `cip-risk` service to retrieve insights for a given VAT registration number.
+
+### Production APIs
+
 ```mermaid
 sequenceDiagram
 box Green MDTP
@@ -96,15 +101,36 @@ The test-only routes enable you to create risk data for a given VAT registration
 
 For full details on available endpoints—including request/response formats and required parameters—refer to the https://github.com/hmrc/cip-risk/blob/main/testOnly.md.
 
-*Note:*
-The test-only endpoints use a slightly different URL structure compared to the main cip-risk API.
-For example:
+```mermaid
+sequenceDiagram  
+    box Green MDTP 
+      actor Consumer
+      participant Proxy as vat-insights-proxy<br/>(protected zone)
+    end
+    box Blue CIP PaaS 2.0
+      participant CIPRisk as CIP Risk<br/>(private zone)
+      participant Risk@{ "type" : "database" }
+    end
 
-The main cip-risk API documents the endpoint as:
-* POST /test-only/str/vertex-data
+    Consumer->>+Proxy: POST /test-only/cip-risk/str/vertex-data
+    Proxy->>+CIPRisk: POST /test-only/str/vertex-data
+    CIPRisk->>Risk: Create Test Data
+    CIPRisk-->>-Proxy: 200 OK
+    Proxy-->>-Consumer: 200 OK (proxied response)
 
-The equivalent test-only endpoint in this service becomes:
-* POST /test-only/cip-risk/str/vertex-data
+    Consumer->>+Proxy: GET /test-only/cip-risk/str/vertex-data
+    Proxy->>+CIPRisk: GET /test-only/str/vertex-data
+    Risk->>CIPRisk: Query Test Data
+    CIPRisk-->>-Proxy: 200 OK (vertex data)
+    Proxy-->>-Consumer: 200 OK (proxied response)
+
+    Consumer->>+Proxy: DELETE /test-only/cip-risk/str/vertex-data
+    Proxy->>+CIPRisk: DELETE /test-only/str/vertex-data
+    CIPRisk->>Risk: Delete Test Data
+    CIPRisk-->>-Proxy: 200 OK
+    Proxy-->>-Consumer: 200 OK (proxied response)
+```
+
 
 ## License
 

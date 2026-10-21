@@ -17,36 +17,18 @@
 package uk.gov.hmrc.vatinsightsproxy.services
 
 import com.google.inject.Inject
-import play.api.libs.json.Json
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.audit.model.ExtendedDataEvent
-import uk.gov.hmrc.vatinsightsproxy.config.AppConfig
 import uk.gov.hmrc.vatinsightsproxy.connectors.CipRiskConnector
-import uk.gov.hmrc.vatinsightsproxy.models.{InsightsRequest, InsightsResponse, StrategicRiskResponse}
+import uk.gov.hmrc.vatinsightsproxy.models.{InsightsRequest, InsightsResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class InsightsService @Inject(
-                               appConfig: AppConfig,
-                               cipRiskConnector: CipRiskConnector,
-                               auditConnector: AuditConnector
+                               cipRiskConnector: CipRiskConnector
                              )(implicit ec: ExecutionContext) :
 
   def insights(request: InsightsRequest)(implicit hc: HeaderCarrier): Future[InsightsResponse] = {
     cipRiskConnector.getStrategicRiskScore(request).map { strategicRiskResponse =>
-      val response = InsightsResponse(request, strategicRiskResponse)
-
-      auditConnector.sendExtendedEvent(
-        ExtendedDataEvent(
-          auditSource = appConfig.appName,
-          auditType = "VatRegistrationNumberInsightsRisk",
-          tags = hc.appendToDefaultTags(hc.extraHeaders.toMap),
-          detail = Json.toJson(response)
-        )
-      )
-
-      response
+      InsightsResponse(request, strategicRiskResponse)
     }
   }

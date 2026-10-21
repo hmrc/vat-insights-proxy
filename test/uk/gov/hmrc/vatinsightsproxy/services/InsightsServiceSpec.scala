@@ -19,14 +19,13 @@ package uk.gov.hmrc.vatinsightsproxy.services
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.BadGatewayException
 import uk.gov.hmrc.vatinsightsproxy.BaseSpec
-import uk.gov.hmrc.vatinsightsproxy.config.MockAppConfig
-import uk.gov.hmrc.vatinsightsproxy.connectors.{MockAuditConnector, MockCipRiskConnector}
+import uk.gov.hmrc.vatinsightsproxy.connectors.MockCipRiskConnector
 
 import scala.concurrent.Future
 
-class InsightsServiceSpec extends BaseSpec with MockAppConfig with MockCipRiskConnector with MockAuditConnector :
+class InsightsServiceSpec extends BaseSpec with MockCipRiskConnector :
 
-  val insightsService = new InsightsService(mockAppConfig, mockCipRiskConnector, mockAuditConnector)
+  val insightsService = new InsightsService(mockCipRiskConnector)
 
   ".insights()" should :
 
@@ -34,9 +33,7 @@ class InsightsServiceSpec extends BaseSpec with MockAppConfig with MockCipRiskCo
 
         "the cip-risk call is successful" in :
 
-          MockAppConfig.appName("vat-insights-proxy")
           MockCipRiskConnector.getStrategicRiskScore(testInsightsRequest)(Future.successful(testStrategicRiskResponse))
-          MockAuditConnector.sendExtendedEvent("VatRegistrationNumberInsightsRisk", testInsightsResponse)
 
           val result = await(insightsService.insights(testInsightsRequest))
           result shouldBe testInsightsResponse
@@ -45,7 +42,6 @@ class InsightsServiceSpec extends BaseSpec with MockAppConfig with MockCipRiskCo
 
         "the cip-risk call is unsuccessful" in :
 
-          MockAppConfig.appName("vat-insights-proxy")
           MockCipRiskConnector.getStrategicRiskScore(testInsightsRequest)(
             Future.failed(new BadGatewayException("CIP Risk API failure"))
           )
